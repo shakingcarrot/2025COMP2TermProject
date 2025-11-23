@@ -2,7 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
-//깃허브 연동 테스트
+//pull request 테스트
 
 /**
  * BoardPanel
