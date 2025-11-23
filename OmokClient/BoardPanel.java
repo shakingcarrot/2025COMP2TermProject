@@ -2,6 +2,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
+//깃허브 연동 테스트
+
 /**
  * BoardPanel
  * - GUI에서 오목판을 그리며 사용자의 마우스 입력을 받아 서버로 이동을 전송한다.
