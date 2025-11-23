@@ -2,7 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
-//pull request 테스트
+//pull request test
 
 /**
  * BoardPanel
