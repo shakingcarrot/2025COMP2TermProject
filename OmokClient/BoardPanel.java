@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
+
 /**
  * BoardPanel
  * - GUI에서 오목판을 그리며 사용자의 마우스 입력을 받아 서버로 이동을 전송한다.
@@ -79,7 +80,7 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
             // 금수일 경우 텍스트 표시
             if (isForbidden) {
                 g2d.setColor(Color.RED);
-                g2d.setFont(new Font("Arial", Font.BOLD, 12));
+                g2d.setFont(new Font("", Font.BOLD, 12));
                 g2d.drawString("금수", hoverX * 30 + 15, hoverY * 30 + 35);
             }
         }

@@ -19,7 +19,7 @@ public class TimerPanel extends JPanel {
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         g.setColor(Color.BLACK);
-        g.setFont(new Font("Arial", Font.BOLD, 24));
+        g.setFont(new Font("", Font.BOLD, 24));
         
         String playerColor = (currentPlayer == 1) ? "흑(1)" : "백(2)";
         String timeText = String.format("현재 턴: %s | 남은 시간: %d초", playerColor, remainingTime);
@@ -29,9 +29,7 @@ public class TimerPanel extends JPanel {
         // 시간이 10초 이하일 때 경고 (빨간색)
         if (remainingTime <= 10 && remainingTime > 0) {
             g.setColor(Color.RED);
-            g.fillRect(0, 0, getWidth(), getHeight());
-            g.setColor(Color.WHITE);
-            g.setFont(new Font("Arial", Font.BOLD, 28));
+            g.setFont(new Font("", Font.BOLD, 24));
             g.drawString(timeText, 20, 45);
         }
     }

@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  */
 public class GameBoard {
     private int[][] board = new int[15][15];
-    private int currentTurn = 1;
+    private int currentTurn = -1;
     private static final int SIZE = 15;
 
     /**
@@ -133,6 +133,10 @@ public class GameBoard {
      */
     public int getCurrentTurn() {
         return currentTurn;
+    }
+
+    public void setCurrentTurn(int currentTurn) {
+        this.currentTurn = currentTurn;
     }
 
     /**

@@ -34,6 +34,9 @@ public class OmokServer {
             client.start();
             System.out.println("플레이어 " + clients.size() + " 연결됨");
             if (clients.size() == 2) {
+                if (gameBoard.getCurrentTurn() == -1) {
+                    gameBoard.setCurrentTurn(1); //두 플레이어가 모두 접속해야 첫 수를 둘 수 있도록 함.
+                }
                 broadcast("START " + gameBoard.getCurrentTurn());
                 gameActive = true;
                 remainingTime = TIME_LIMIT;
