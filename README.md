@@ -59,6 +59,7 @@ java -cp out OmokClient
 - 기록 파일 `record.txt`는 서버 실행 디렉터리에 생성됩니다.
 
 ---
-원하시면 README에 더 자세한 사용 예시(스샷, UI 설명)나 테스트 스크립트도 추가해드리겠습니다.
+TODO
+채팅창 만들기
 
 we will make omok project
