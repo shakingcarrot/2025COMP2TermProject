@@ -89,10 +89,7 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
     public void updateBoard(int x, int y, int player) {
         board[x][y] = player;
         repaint();
-        if (GameRule.checkWin(board, x, y, player)) {
-            // 승리 판정 후 사용자에게 알림
-            showGameEndDialog("🎉 플레이어 " + player + " 승리!");
-        } else if (GameRule.isDraw(board)) {
+        if (GameRule.isDraw(board)) {
             showGameEndDialog("무승부입니다!");
         }
     }
@@ -115,7 +112,6 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
         if (option == JOptionPane.YES_OPTION) {
             // 다시하기: 서버에 RESET 메시지 전송
             network.sendReset();
-            resetBoard();
         } else {
             // 나가기: 게임 종료
             System.exit(0);

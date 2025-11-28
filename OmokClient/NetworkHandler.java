@@ -1,7 +1,10 @@
 
-import javax.swing.*;
-import java.io.*;
-import java.net.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 /**
  * NetworkHandler
@@ -16,12 +19,16 @@ import java.net.*;
  * - 시간 정보 수신 및 표시 (TIME, TURN 메시지)
  */
 public class NetworkHandler {
+    public enum AuthMode { LOGIN, REGISTER }
+
     private Socket socket;
     private DataInputStream in;
     private DataOutputStream out;
     private int playerId;
+    private String username;
     private BoardPanel board;
     private TimerPanel timerPanel;
+    private ChatWindow chatWindow;
 
     /**
      * 서버에 연결하고 플레이어 ID를 수신한다. 실패 시 사용자에게 메시지를 띄운다.
@@ -29,17 +36,16 @@ public class NetworkHandler {
      *
      * @param host 서버 호스트명 또는 IP
      */
-    public NetworkHandler(String host, TimerPanel timerPanel) {
-        this.timerPanel = timerPanel;
+    public NetworkHandler(String host, String username, String password, AuthMode mode) throws IOException {
         try {
             socket = new Socket(host, 5000);
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
-            playerId = in.readInt();
-            JOptionPane.showMessageDialog(null, "플레이어 " + playerId + "으로 접속했습니다.");
-            new Thread(() -> listen()).start();
+            authenticate(username, password, mode);
+            new Thread(this::listen).start();
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, "서버 연결 실패: " + e.getMessage());
+            close();
+            throw e;
         }
     }
 
@@ -48,6 +54,17 @@ public class NetworkHandler {
      */
     public void setBoard(BoardPanel board) {
         this.board = board;
+    }
+
+    public void setTimerPanel(TimerPanel timerPanel) {
+        this.timerPanel = timerPanel;
+    }
+
+    /**
+     * 채팅 창에 대한 참조를 설정한다.
+     */
+    public void setChatWindow(ChatWindow chatWindow) {
+        this.chatWindow = chatWindow;
     }
 
     /**
@@ -68,26 +85,68 @@ public class NetworkHandler {
                     int x = Integer.parseInt(p[1]);
                     int y = Integer.parseInt(p[2]);
                     int pid = Integer.parseInt(p[3]);
-                    board.updateBoard(x, y, pid);
+                    if (board != null) {
+                        board.updateBoard(x, y, pid);
+                    }
                 } else if (msg.startsWith("WIN")) {
                     int winner = Integer.parseInt(msg.split(" ")[1]);
-                    board.handleWin(winner);
+                    if (board != null) {
+                        board.handleWin(winner);
+                    }
                 } else if (msg.equals("RESET")) {
                     // 서버로부터 게임 초기화 신호 수신
-                    board.handleReset();
+                    if (board != null) {
+                        board.handleReset();
+                    }
                 } else if (msg.startsWith("TIME")) {
                     int remainingTime = Integer.parseInt(msg.split(" ")[1]);
-                    timerPanel.updateTime(remainingTime);
+                    if (timerPanel != null) {
+                        timerPanel.updateTime(remainingTime);
+                    }
                 } else if (msg.startsWith("TURN")) {
                     int currentPlayer = Integer.parseInt(msg.split(" ")[1]);
-                    timerPanel.setCurrentPlayer(currentPlayer);
+                    if (timerPanel != null) {
+                        timerPanel.setCurrentPlayer(currentPlayer);
+                    }
                 } else if (msg.startsWith("START")) {
                     int startPlayer = Integer.parseInt(msg.split(" ")[1]);
-                    timerPanel.setCurrentPlayer(startPlayer);
-                    timerPanel.updateTime(35);
+                    if (timerPanel != null) {
+                        timerPanel.setCurrentPlayer(startPlayer);
+                        timerPanel.updateTime(35);
+                    }
+                } else if (msg.startsWith("CHAT")) {
+                    if (chatWindow == null) continue;
+                    String[] parts = msg.split(" ", 3);
+                    if (parts.length < 3) continue;
+                    int sender = Integer.parseInt(parts[1]);
+                    String text = parts[2];
+                    chatWindow.appendMessage("플레이어 " + sender + ": " + text);
+                } else if (msg.startsWith("REMATCH_PROMPT")) {
+                    String requester = msg.length() > 15 ? msg.substring(15).trim() : "상대";
+                    showInfoMessage(requester + "님이 다시하기를 신청했습니다.\n다시하기 버튼을 눌러 수락하세요.");
+                } else if (msg.startsWith("REMATCH_WAIT")) {
+                    String opponent = msg.length() > 13 ? msg.substring(13).trim() : "상대";
+                    showInfoMessage(opponent + "님의 응답을 기다리는 중입니다.");
+                } else if (msg.startsWith("REMATCH_ACCEPT")) {
+                    String accepter = msg.length() > 15 ? msg.substring(15).trim() : "상대";
+                    showInfoMessage(accepter + "님이 다시하기 요청을 수락했습니다. 새 게임을 시작합니다.");
+                } else if (msg.startsWith("REMATCH_CANCEL")) {
+                    String reason = msg.length() > 15 ? msg.substring(15).trim() : "다시하기 요청이 취소되었습니다.";
+                    showInfoMessage(reason);
+                } else if (msg.startsWith("REMATCH_FAIL")) {
+                    String reason = msg.length() > 13 ? msg.substring(13).trim() : "상대를 기다리는 중입니다.";
+                    showInfoMessage(reason);
+                } else if (msg.startsWith("REMATCH_ALREADY")) {
+                    String detail = msg.length() > 17 ? msg.substring(17).trim() : "상대 응답을 기다리는 중입니다.";
+                    showInfoMessage(detail);
+                } else if (msg.equals("WAITING")) {
+                    showInfoMessage("상대방을 기다리는 중입니다.");
                 }
             }
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        } finally {
+            close();
+        }
     }
 
     public void sendMove(int x, int y) {
@@ -105,5 +164,49 @@ public class NetworkHandler {
         } catch (IOException ignored) {}
     }
 
+    /**
+     * 채팅 메시지를 서버에 전송한다.
+     */
+    public void sendChat(String message) {
+        try {
+            out.writeUTF("CHAT " + message);
+        } catch (IOException ignored) {}
+    }
+
     public int getPlayerId() { return playerId; }
+
+    public String getUsername() { return username; }
+
+    private void showInfoMessage(String message) {
+        SwingUtilities.invokeLater(() ->
+                JOptionPane.showMessageDialog(board != null ? board : null, message, "알림", JOptionPane.INFORMATION_MESSAGE)
+        );
+    }
+
+    private void authenticate(String username, String password, AuthMode mode) throws IOException {
+        out.writeUTF("AUTH " + mode.name() + " " + username + " " + password);
+        String response = in.readUTF();
+        if (response.startsWith("AUTH_OK")) {
+            String[] parts = response.split(" ", 3);
+            this.playerId = Integer.parseInt(parts[1]);
+            this.username = parts.length >= 3 ? parts[2] : username;
+        } else if (response.startsWith("AUTH_FAIL")) {
+            String reason = response.length() > 9 ? response.substring(9).trim() : "인증 실패";
+            throw new IOException(reason);
+        } else {
+            throw new IOException("알 수 없는 응답: " + response);
+        }
+    }
+
+    public void close() {
+        try {
+            if (in != null) in.close();
+        } catch (IOException ignored) {}
+        try {
+            if (out != null) out.close();
+        } catch (IOException ignored) {}
+        try {
+            if (socket != null && !socket.isClosed()) socket.close();
+        } catch (IOException ignored) {}
+    }
 }

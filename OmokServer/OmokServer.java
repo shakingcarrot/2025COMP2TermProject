@@ -14,10 +14,21 @@ public class OmokServer {
     private ServerSocket serverSocket;
     private List<ClientHandler> clients = new ArrayList<>();
     private GameBoard gameBoard = new GameBoard();
+    private List<String> chatHistory = new ArrayList<>();
+    private Map<Integer, String> playerNames = new HashMap<>();
+    private final UserManager userManager = new UserManager("users.db");
+    private Queue<Integer> availableSlots = new ArrayDeque<>();
+    private int rematchRequester = -1;
     private static final int TIME_LIMIT = 35; // 35초 시간 제한
     private int remainingTime = TIME_LIMIT;
     private boolean gameActive = false;
     private Object timerLock = new Object();
+    private Thread timerThread;
+
+    public OmokServer() {
+        availableSlots.offer(1);
+        availableSlots.offer(2);
+    }
 
     /**
      * 서버를 시작하고 포트 5000에서 클라이언트 연결을 기다린다.
@@ -29,20 +40,18 @@ public class OmokServer {
 
         while (true) {
             Socket socket = serverSocket.accept();
-            ClientHandler client = new ClientHandler(socket, clients.size() + 1, this);
-            clients.add(client);
-            client.start();
-            System.out.println("플레이어 " + clients.size() + " 연결됨");
-            if (clients.size() == 2) {
-                if (gameBoard.getCurrentTurn() == -1) {
-                    gameBoard.setCurrentTurn(1); //두 플레이어가 모두 접속해야 첫 수를 둘 수 있도록 함.
-                }
-                broadcast("START " + gameBoard.getCurrentTurn());
-                gameActive = true;
-                remainingTime = TIME_LIMIT;
-                startTimer();
-                System.out.println("두 명이 모두 연결되었습니다. 게임 시작!");
+            int slot = acquireSlot();
+            if (slot == -1) {
+                System.out.println("새 연결 거부: 슬롯 부족");
+                try (DataOutputStream tempOut = new DataOutputStream(socket.getOutputStream())) {
+                    tempOut.writeUTF("SERVER_FULL");
+                } catch (IOException ignored) {}
+                socket.close();
+                continue;
             }
+            ClientHandler client = new ClientHandler(socket, slot, this);
+            client.start();
+            System.out.println("새 클라이언트 연결 (슬롯 " + slot + ")");
         }
     }
 
@@ -50,7 +59,8 @@ public class OmokServer {
      * 각 턴마다 시간 제한을 관리하는 타이머를 시작한다.
      */
     private void startTimer() {
-        new Thread(() -> {
+        stopTimerThread();
+        timerThread = new Thread(() -> {
             while (gameActive) {
                 try {
                     Thread.sleep(1000); // 1초마다 업데이트
@@ -67,9 +77,18 @@ public class OmokServer {
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    break;
                 }
             }
-        }).start();
+        });
+        timerThread.start();
+    }
+
+    private void stopTimerThread() {
+        if (timerThread != null) {
+            timerThread.interrupt();
+            timerThread = null;
+        }
     }
 
     /**
@@ -109,14 +128,158 @@ public class OmokServer {
 
     /**
      * 클라이언트의 "다시하기" 요청을 처리하여 게임을 초기화한다.
+     * - 첫 요청자는 상대의 승인을 기다리고, 두 번째 요청이 들어오면 새 게임을 시작한다.
      */
-    public synchronized void handleReset() {
+    public synchronized void handleReset(int playerId) {
+        if (clients.size() < 2) {
+            sendToPlayer(playerId, "REMATCH_FAIL 상대를 기다리는 중입니다.");
+            return;
+        }
+
+        if (rematchRequester == -1) {
+            rematchRequester = playerId;
+            int opponentId = getOpponentId(playerId);
+            String requesterName = getPlayerName(playerId);
+            String opponentName = opponentId == -1 ? "상대" : getPlayerName(opponentId);
+            sendToPlayer(playerId, "REMATCH_WAIT " + opponentName);
+            if (opponentId != -1) {
+                sendToPlayer(opponentId, "REMATCH_PROMPT " + requesterName);
+            }
+            System.out.println("사용자 [" + requesterName + "] 가 다시하기를 요청했습니다.");
+            return;
+        }
+
+        if (rematchRequester == playerId) {
+            sendToPlayer(playerId, "REMATCH_ALREADY 상대 응답을 기다리는 중입니다.");
+            return;
+        }
+
+        String accepterName = getPlayerName(playerId);
+        broadcast("REMATCH_ACCEPT " + accepterName);
+        startNewMatch();
+        System.out.println("사용자 [" + accepterName + "] 가 다시하기 요청을 수락했습니다.");
+    }
+
+    /**
+     * 플레이어 채팅 메시지를 기록하고 모든 클라이언트에 전송한다.
+     */
+    public synchronized void handleChat(int playerId, String message) {
+        if (message == null) return;
+        String trimmed = message.trim();
+        if (trimmed.isEmpty()) return;
+
+        String displayName = playerNames.getOrDefault(playerId, "Player" + playerId);
+        String formatted = "CHAT " + playerId + " [" + displayName + "] " + trimmed;
+        chatHistory.add(formatted);
+        if (chatHistory.size() > 100) {
+            chatHistory.remove(0);
+        }
+        broadcast(formatted);
+    }
+
+    /**
+     * 서버에 누적된 채팅 기록을 반환한다.
+     */
+    public synchronized List<String> getChatHistory() {
+        return new ArrayList<>(chatHistory);
+    }
+
+    public UserManager getUserManager() {
+        return userManager;
+    }
+
+    public synchronized void registerPlayerName(int playerId, String username) {
+        playerNames.put(playerId, username);
+        System.out.println("사용자 [" + username + "] 가 슬롯 " + playerId + "로 로그인했습니다.");
+    }
+
+    public synchronized String getPlayerName(int playerId) {
+        return playerNames.getOrDefault(playerId, "Player" + playerId);
+    }
+
+    public synchronized void removeClient(ClientHandler handler) {
+        clients.remove(handler);
+        String name = playerNames.remove(handler.getPlayerId());
+        String display = name != null ? name : "Player" + handler.getPlayerId();
+        System.out.println("사용자 [" + display + "] 연결 종료 (슬롯 " + handler.getPlayerId() + ")");
+        releaseSlot(handler.getPlayerId());
+        if (rematchRequester != -1) {
+            int notifyTarget = rematchRequester == handler.getPlayerId()
+                    ? getOpponentId(handler.getPlayerId())
+                    : rematchRequester;
+            if (notifyTarget != -1 && notifyTarget != handler.getPlayerId()) {
+                sendToPlayer(notifyTarget, "REMATCH_CANCEL 상대가 게임을 떠났습니다.");
+            }
+            rematchRequester = -1;
+        }
+        if (clients.size() < 2) {
+            stopTimerThread();
+            gameActive = false;
+            gameBoard.resetGame();
+            remainingTime = TIME_LIMIT;
+            broadcast("WAITING");
+            System.out.println("접속자가 2명 미만으로 떨어져 게임을 대기 상태로 초기화했습니다.");
+        }
+    }
+
+    public synchronized void registerClient(ClientHandler handler) {
+        if (!clients.contains(handler)) {
+            clients.add(handler);
+            if (clients.size() == 2) {
+                startNewMatch();
+            } else {
+                broadcast("WAITING");
+                System.out.println("한 명이 접속했습니다. 상대를 기다리는 중입니다.");
+            }
+        }
+    }
+
+    private synchronized void startNewMatch() {
+        if (clients.size() < 2) return;
+        stopTimerThread();
+        gameActive = false;
+        rematchRequester = -1;
         gameBoard.resetGame();
-        gameActive = true;
         remainingTime = TIME_LIMIT;
+        gameActive = true;
+        int startPlayer = gameBoard.getCurrentTurn();
+        if (startPlayer == -1) {
+            startPlayer = 1;
+            gameBoard.setCurrentTurn(startPlayer);
+        }
         broadcast("RESET");
-        broadcast("START " + gameBoard.getCurrentTurn());
-        System.out.println("게임이 초기화되었습니다.");
+        broadcast("START " + startPlayer);
+        startTimer();
+        System.out.println("두 명이 모두 연결되었습니다. 게임 시작!");
+    }
+
+    private void sendToPlayer(int playerId, String msg) {
+        for (ClientHandler c : clients) {
+            if (c.getPlayerId() == playerId) {
+                c.sendMessage(msg);
+                break;
+            }
+        }
+    }
+
+    private int getOpponentId(int playerId) {
+        for (ClientHandler c : clients) {
+            if (c.getPlayerId() != playerId) {
+                return c.getPlayerId();
+            }
+        }
+        return -1;
+    }
+
+    private synchronized int acquireSlot() {
+        Integer slot = availableSlots.poll();
+        return slot == null ? -1 : slot;
+    }
+
+    private synchronized void releaseSlot(int slot) {
+        if (!availableSlots.contains(slot)) {
+            availableSlots.offer(slot);
+        }
     }
 
     /**
