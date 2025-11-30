@@ -140,7 +140,7 @@ public class NetworkHandler {
                     String detail = msg.length() > 17 ? msg.substring(17).trim() : "상대 응답을 기다리는 중입니다.";
                     showInfoMessage(detail);
                 } else if (msg.equals("WAITING")) {
-                    showInfoMessage("상대방을 기다리는 중입니다.");
+                    showInfoMessage("상대를 기다리는 중입니다.");
                 } else if (msg.startsWith("PLAYER_INFO")) {
                     String[] p = msg.split(" ");
                     String blackName = p[1];
