@@ -155,19 +155,6 @@ public class GameBoard {
         }
         return false;
     }
-
-    /**
-     * 특정 방향으로 연속된 돌 개수를 센다 (현재 위치 제외).
-     */
-    /**
-     * 게임 결과를 기록 파일(record.txt)에 저장한다.
-     */
-    public void saveResult(String result) {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter("record.txt", true))) {
-            bw.write(LocalDateTime.now() + " - " + result + "\n");
-        } catch (IOException ignored) {}
-    }
-
     /**
      * 게임을 초기화하여 새 게임을 시작할 준비를 한다.
      */

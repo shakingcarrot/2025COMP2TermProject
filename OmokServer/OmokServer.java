@@ -1,7 +1,7 @@
-
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.time.LocalDateTime;
 
 /**
  * OmokServer
@@ -63,14 +63,13 @@ public class OmokServer {
         timerThread = new Thread(() -> {
             while (gameActive) {
                 try {
-                    Thread.sleep(1000); // 1초마다 업데이트
+                    Thread.sleep(1000);
                     synchronized (timerLock) {
                         if (gameActive && remainingTime > 0) {
                             remainingTime--;
                             broadcast("TIME " + remainingTime);
-                            
+
                             if (remainingTime == 0) {
-                                // 시간 종료, 턴 넘김
                                 handleTimeOut();
                             }
                         }
@@ -104,9 +103,6 @@ public class OmokServer {
 
     /**
      * 클라이언트로부터 온 이동 요청을 처리한다.
-     * - 유효성 검사 후 보드에 반영하고 모든 클라이언트에 MOVE 메시지를 전송
-     * - 승리 시 WIN 메시지를 브로드캐스트하고 결과를 저장
-     * - 턴 변경 시 시간 초기화
      */
     public synchronized void handleMove(int x, int y, int playerId) {
         if (!gameBoard.isValidMove(x, y, playerId)) return;
@@ -116,8 +112,9 @@ public class OmokServer {
 
         if (gameBoard.checkWin(x, y, playerId)) {
             broadcast("WIN " + playerId);
-            gameBoard.saveResult("Player" + playerId + " 승리");
-            gameActive = false; // 게임 종료
+            recordWin(playerId);   // ← 여기서 ID 기반 저장
+
+            gameActive = false;
         } else {
             gameBoard.switchTurn();
             remainingTime = TIME_LIMIT;
@@ -127,8 +124,48 @@ public class OmokServer {
     }
 
     /**
-     * 클라이언트의 "다시하기" 요청을 처리하여 게임을 초기화한다.
-     * - 첫 요청자는 상대의 승인을 기다리고, 두 번째 요청이 들어오면 새 게임을 시작한다.
+     * 경기기 기록 저장
+     */
+    public synchronized void recordWin(int winnerId) {
+        int loserId = getOpponentId(winnerId);
+
+        String winnerName = playerNames.getOrDefault(winnerId, "Player" + winnerId);
+        String loserName  = playerNames.getOrDefault(loserId, "Player" + loserId);
+
+        String line = LocalDateTime.now() + 
+            " - " + winnerName + " 승리 / " + loserName + " 패배\n";
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("record.txt", true))) {
+            bw.write(line);
+        } catch (IOException ignored) {}
+
+        System.out.println("기록 저장됨: " + line);
+    }
+
+    public int getWins(String username) {
+        int wins = 0;
+        try (BufferedReader br = new BufferedReader(new FileReader("record.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+            if (line.contains(username + " 승리")) wins++;
+            }
+        } catch (IOException ignored) {}
+        return wins;
+    }
+
+    public int getLosses(String username) {
+        int losses = 0;
+        try (BufferedReader br = new BufferedReader(new FileReader("record.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.contains(username + " 패배")) losses++;
+            }
+        } catch (IOException ignored) {}
+        return losses;
+    }
+
+    /**
+     * "다시하기" 요청 처리
      */
     public synchronized void handleReset(int playerId) {
         if (clients.size() < 2) {
@@ -160,9 +197,6 @@ public class OmokServer {
         System.out.println("사용자 [" + accepterName + "] 가 다시하기 요청을 수락했습니다.");
     }
 
-    /**
-     * 플레이어 채팅 메시지를 기록하고 모든 클라이언트에 전송한다.
-     */
     public synchronized void handleChat(int playerId, String message) {
         if (message == null) return;
         String trimmed = message.trim();
@@ -177,9 +211,6 @@ public class OmokServer {
         broadcast(formatted);
     }
 
-    /**
-     * 서버에 누적된 채팅 기록을 반환한다.
-     */
     public synchronized List<String> getChatHistory() {
         return new ArrayList<>(chatHistory);
     }
@@ -203,6 +234,7 @@ public class OmokServer {
         String display = name != null ? name : "Player" + handler.getPlayerId();
         System.out.println("사용자 [" + display + "] 연결 종료 (슬롯 " + handler.getPlayerId() + ")");
         releaseSlot(handler.getPlayerId());
+
         if (rematchRequester != -1) {
             int notifyTarget = rematchRequester == handler.getPlayerId()
                     ? getOpponentId(handler.getPlayerId())
@@ -212,6 +244,7 @@ public class OmokServer {
             }
             rematchRequester = -1;
         }
+
         if (clients.size() < 2) {
             stopTimerThread();
             gameActive = false;
@@ -242,16 +275,46 @@ public class OmokServer {
         gameBoard.resetGame();
         remainingTime = TIME_LIMIT;
         gameActive = true;
+
         int startPlayer = gameBoard.getCurrentTurn();
         if (startPlayer == -1) {
             startPlayer = 1;
             gameBoard.setCurrentTurn(startPlayer);
         }
+
         broadcast("RESET");
         broadcast("START " + startPlayer);
         startTimer();
         System.out.println("두 명이 모두 연결되었습니다. 게임 시작!");
+        sendPlayerInfoToClients();
     }
+
+    public synchronized void sendPlayerInfoToClients() {
+        if (clients.size() < 2) return;
+
+        int p1 = clients.get(0).getPlayerId();
+        int p2 = clients.get(1).getPlayerId();
+
+        String name1 = getPlayerName(p1);
+        String name2 = getPlayerName(p2);
+
+        int wins1 = getWins(name1);
+        int losses1 = getLosses(name1);
+        int wins2 = getWins(name2);
+        int losses2 = getLosses(name2);
+
+        double rate1 = wins1 + losses1 > 0 ? (wins1 * 100.0 / (wins1 + losses1)) : 0;
+        double rate2 = wins2 + losses2 > 0 ? (wins2 * 100.0 / (wins2 + losses2)) : 0;
+
+        String msg = String.format(
+            "PLAYER_INFO %s %.2f %s %.2f",
+            name1, rate1,
+            name2, rate2
+        );
+
+        broadcast(msg);
+    }
+
 
     private void sendToPlayer(int playerId, String msg) {
         for (ClientHandler c : clients) {

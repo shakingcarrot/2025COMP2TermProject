@@ -22,6 +22,12 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
     private int playerId;
     private int hoverX = -1;
     private int hoverY = -1;
+    // ---------------------------------------------
+    // ⭐ 추가된 필드: 흑/백 플레이어 이름 + 승률
+    // ---------------------------------------------
+    private String blackInfo = "흑";
+    private String whiteInfo = "백";
+    // ---------------------------------------------
 
     public BoardPanel(NetworkHandler network) {
         this.network = network;
@@ -30,6 +36,17 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
         addMouseListener(this);
         addMouseMotionListener(this);
     }
+    // ---------------------------------------------
+    // ⭐ 추가된 메소드: 서버로부터 닉네임 + 승률 전달받아 갱신
+    // ---------------------------------------------
+    public void updatePlayerInfo(String blackName, double blackRate,
+                                 String whiteName, double whiteRate) {
+
+        this.blackInfo = blackName + " (" + String.format("%.0f%%", blackRate) + ")";
+        this.whiteInfo = whiteName + " (" + String.format("%.0f%%", whiteRate) + ")";
+        repaint();
+    }
+    // ---------------------------------------------
 
     @Override
     public void paintComponent(Graphics g) {
@@ -37,6 +54,16 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
         // 배경색
         g.setColor(new Color(240, 200, 120));
         g.fillRect(0, 0, getWidth(), getHeight());
+
+        // ---------------------------------------------
+        // ⭐ 추가된 UI 요소: 닉네임 + 승률 표시
+        // ---------------------------------------------
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("맑은 고딕", Font.BOLD, 16));
+        g.drawString("흑: " + blackInfo, 30, 20);
+        g.drawString("백: " + whiteInfo, 250, 20);
+        // ---------------------------------------------
+
 
         // 격자
         g.setColor(Color.BLACK);

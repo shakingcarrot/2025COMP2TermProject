@@ -141,13 +141,24 @@ public class NetworkHandler {
                     showInfoMessage(detail);
                 } else if (msg.equals("WAITING")) {
                     showInfoMessage("상대방을 기다리는 중입니다.");
+                } else if (msg.startsWith("PLAYER_INFO")) {
+                    String[] p = msg.split(" ");
+                    String blackName = p[1];
+                    double blackRate = Double.parseDouble(p[2]);
+                    String whiteName = p[3];
+                    double whiteRate = Double.parseDouble(p[4]);
+
+                    if (board != null) {
+                        board.updatePlayerInfo(blackName, blackRate, whiteName, whiteRate);
+                    }
                 }
             }
-        } catch (IOException ignored) {
-        } finally {
+        } catch (IOException ignored) {}
+        finally {
             close();
         }
     }
+
 
     public void sendMove(int x, int y) {
         try {
