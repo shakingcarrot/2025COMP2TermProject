@@ -110,11 +110,11 @@ public class NetworkHandler {
                         timerPanel.setCurrentPlayer(currentPlayer);
                     }
                 } else if (msg.startsWith("START")) {
-                    closeInfoMessage();
                     int startPlayer = Integer.parseInt(msg.split(" ")[1]);
                     if (timerPanel != null) {
                         timerPanel.setCurrentPlayer(startPlayer);
                         timerPanel.updateTime(35);
+                        closeInfoMessage();
                     }
                 } else if (msg.startsWith("CHAT")) {
                     if (chatWindow == null) continue;
@@ -129,9 +129,10 @@ public class NetworkHandler {
                 } else if (msg.startsWith("REMATCH_WAIT")) {
                     String opponent = msg.length() > 13 ? msg.substring(13).trim() : "상대";
                     showInfoMessage(opponent + "님의 응답을 기다리는 중입니다.");
+                    //다이얼로그 띄워도 어짜피 상대를 기다리는 다이얼로그에 씹혀서 채팅으로 알리는 게 좋을 것 같았습니다.
                 } else if (msg.startsWith("REMATCH_ACCEPT")) {
                     String accepter = msg.length() > 15 ? msg.substring(15).trim() : "상대";
-                    showInfoMessage(accepter + "님이 다시하기 요청을 수락했습니다. 새 게임을 시작합니다.");
+                    chatWindow.appendMessage(accepter + "님이 다시하기 요청을 수락했습니다. 새 게임을 시작합니다.");
                 } else if (msg.startsWith("REMATCH_CANCEL")) {
                     chatWindow.appendMessage(msg.length() > 15 ? "상대가 게임을 떠났습니다." : "다시하기 요청이 취소되었습니다.");
                     //다이얼로그 띄워도 어짜피 상대를 기다리는 다이얼로그에 씹혀서 채팅으로 알리는 게 좋을 것 같았습니다.
@@ -204,8 +205,10 @@ public class NetworkHandler {
 
     //매칭되면 상대를 기다리고 있다는 메시지 창이 자동으로 닫힙니다.
     private void closeInfoMessage() {
-        currentDialog.dispose();
-    }
+        SwingUtilities.invokeLater(() -> {
+            currentDialog.dispose();
+        });
+        }
 
     private void authenticate(String username, String password, AuthMode mode) throws IOException {
         out.writeUTF("AUTH " + mode.name() + " " + username + " " + password);
