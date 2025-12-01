@@ -3,8 +3,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 /**
  * NetworkHandler
@@ -29,6 +28,8 @@ public class NetworkHandler {
     private BoardPanel board;
     private TimerPanel timerPanel;
     private ChatWindow chatWindow;
+    private JDialog currentDialog;
+
 
     /**
      * 서버에 연결하고 플레이어 ID를 수신한다. 실패 시 사용자에게 메시지를 띄운다.
@@ -189,9 +190,20 @@ public class NetworkHandler {
     public String getUsername() { return username; }
 
     private void showInfoMessage(String message) {
-        SwingUtilities.invokeLater(() ->
-                JOptionPane.showMessageDialog(board != null ? board : null, message, "알림", JOptionPane.INFORMATION_MESSAGE)
-        );
+        SwingUtilities.invokeLater(() -> {
+            if (currentDialog != null && currentDialog.isShowing()) {
+                currentDialog.dispose();
+            }
+
+            JOptionPane optionPane = new JOptionPane(message, JOptionPane.INFORMATION_MESSAGE);
+            currentDialog = optionPane.createDialog(board, "알림");
+            currentDialog.setVisible(true);
+            //JOptionPane.showMessageDialog(board != null ? board : null, message, "알림", JOptionPane.INFORMATION_MESSAGE)
+        });
+    }
+
+    private void closeInfoMessage() {
+
     }
 
     private void authenticate(String username, String password, AuthMode mode) throws IOException {
