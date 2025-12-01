@@ -59,12 +59,14 @@ public class OmokServer {
      * 각 턴마다 시간 제한을 관리하는 타이머를 시작한다.
      */
     private void startTimer() {
-        sendPlayerInfoToClients();
         stopTimerThread();
         timerThread = new Thread(() -> {
             while (gameActive) {
                 try {
                     Thread.sleep(1000);
+                    sendPlayerInfoToClients();
+                    //플레이어 정보를 계속 갱신합니다. 가끔 한 쪽에서 플레이어 정보를 못 읽고 누락시키는 버그가 있는데
+                    //정확한 원인을 모르겠어서 누락시켜도 초마다 계속 갱신시키도록 만들어봤습니다...
                     synchronized (timerLock) {
                         if (gameActive && remainingTime > 0) {
                             remainingTime--;
@@ -112,7 +114,7 @@ public class OmokServer {
         broadcast("MOVE " + x + " " + y + " " + playerId);
 
         if (gameBoard.checkWin(x, y, playerId)) {
-            broadcast("WIN " + playerId);
+            broadcast("WIN " + getPlayerName(playerId));
             recordWin(playerId);   // ← 여기서 ID 기반 저장
 
             gameActive = false;
@@ -260,7 +262,6 @@ public class OmokServer {
     public synchronized void registerClient(ClientHandler handler) {
         if (!clients.contains(handler)) {
             clients.add(handler);
-            sendPlayerInfoToClients();
             if (clients.size() == 2) {
                 startNewMatch();
             } else {
@@ -287,7 +288,6 @@ public class OmokServer {
 
         broadcast("RESET");
         broadcast("START " + startPlayer);
-        sendPlayerInfoToClients();
         startTimer();
         System.out.println("두 명이 모두 연결되었습니다. 게임 시작!");
     }
