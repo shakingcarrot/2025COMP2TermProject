@@ -259,6 +259,7 @@ public class OmokServer {
     public synchronized void registerClient(ClientHandler handler) {
         if (!clients.contains(handler)) {
             clients.add(handler);
+            sendPlayerInfoToClients();
             if (clients.size() == 2) {
                 startNewMatch();
             } else {
@@ -285,9 +286,9 @@ public class OmokServer {
 
         broadcast("RESET");
         broadcast("START " + startPlayer);
+        sendPlayerInfoToClients();
         startTimer();
         System.out.println("두 명이 모두 연결되었습니다. 게임 시작!");
-        sendPlayerInfoToClients();
     }
 
     public synchronized void sendPlayerInfoToClients() {

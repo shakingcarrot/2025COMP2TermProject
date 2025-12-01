@@ -110,7 +110,6 @@ public class NetworkHandler {
                         timerPanel.setCurrentPlayer(currentPlayer);
                     }
                 } else if (msg.startsWith("START")) {
-                    new OmokServer().sendPlayerInfoToClients();
                     int startPlayer = Integer.parseInt(msg.split(" ")[1]);
                     if (timerPanel != null) {
                         timerPanel.setCurrentPlayer(startPlayer);
