@@ -110,6 +110,7 @@ public class NetworkHandler {
                         timerPanel.setCurrentPlayer(currentPlayer);
                     }
                 } else if (msg.startsWith("START")) {
+                    closeInfoMessage();
                     int startPlayer = Integer.parseInt(msg.split(" ")[1]);
                     if (timerPanel != null) {
                         timerPanel.setCurrentPlayer(startPlayer);
@@ -199,6 +200,11 @@ public class NetworkHandler {
             currentDialog = optionPane.createDialog(board, "알림");
             currentDialog.setVisible(true);
         });
+    }
+
+    //매칭되면 상대를 기다리고 있다는 메시지 창이 자동으로 닫힙니다.
+    private void closeInfoMessage() {
+        currentDialog.dispose();
     }
 
     private void authenticate(String username, String password, AuthMode mode) throws IOException {
