@@ -132,8 +132,8 @@ public class NetworkHandler {
                     String accepter = msg.length() > 15 ? msg.substring(15).trim() : "상대";
                     showInfoMessage(accepter + "님이 다시하기 요청을 수락했습니다. 새 게임을 시작합니다.");
                 } else if (msg.startsWith("REMATCH_CANCEL")) {
-                    String reason = msg.length() > 15 ? msg.substring(15).trim() : "다시하기 요청이 취소되었습니다.";
-                    showInfoMessage(reason);
+                    chatWindow.appendMessage(msg.length() > 15 ? "상대가 게임을 떠났습니다." : "다시하기 요청이 취소되었습니다.");
+                    //다이얼로그 띄워도 어짜피 상대를 기다리는 다이얼로그에 씹혀서 채팅으로 알리는 게 좋을 것 같았습니다.
                 } else if (msg.startsWith("REMATCH_FAIL")) {
                     String reason = msg.length() > 13 ? msg.substring(13).trim() : "상대를 기다리는 중입니다.";
                     showInfoMessage(reason);

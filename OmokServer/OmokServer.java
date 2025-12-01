@@ -241,6 +241,7 @@ public class OmokServer {
                     : rematchRequester;
             if (notifyTarget != -1 && notifyTarget != handler.getPlayerId()) {
                 sendToPlayer(notifyTarget, "REMATCH_CANCEL 상대가 게임을 떠났습니다.");
+
             }
             rematchRequester = -1;
         }
