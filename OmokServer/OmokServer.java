@@ -59,6 +59,7 @@ public class OmokServer {
      * 각 턴마다 시간 제한을 관리하는 타이머를 시작한다.
      */
     private void startTimer() {
+        sendPlayerInfoToClients();
         stopTimerThread();
         timerThread = new Thread(() -> {
             while (gameActive) {
