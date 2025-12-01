@@ -198,12 +198,7 @@ public class NetworkHandler {
             JOptionPane optionPane = new JOptionPane(message, JOptionPane.INFORMATION_MESSAGE);
             currentDialog = optionPane.createDialog(board, "알림");
             currentDialog.setVisible(true);
-            //JOptionPane.showMessageDialog(board != null ? board : null, message, "알림", JOptionPane.INFORMATION_MESSAGE)
         });
-    }
-
-    private void closeInfoMessage() {
-
     }
 
     private void authenticate(String username, String password, AuthMode mode) throws IOException {
