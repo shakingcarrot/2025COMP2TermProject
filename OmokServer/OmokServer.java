@@ -64,6 +64,9 @@ public class OmokServer {
             while (gameActive) {
                 try {
                     Thread.sleep(1000);
+                    sendPlayerInfoToClients();
+                    //플레이어 정보를 계속 갱신합니다. 가끔 한 쪽에서 플레이어 정보를 못 읽고 누락시키는 버그가 있는데
+                    //정확한 원인을 모르겠어서 누락시켜도 초마다 계속 갱신시키도록 만들어봤습니다...
                     synchronized (timerLock) {
                         if (gameActive && remainingTime > 0) {
                             remainingTime--;
@@ -111,7 +114,7 @@ public class OmokServer {
         broadcast("MOVE " + x + " " + y + " " + playerId);
 
         if (gameBoard.checkWin(x, y, playerId)) {
-            broadcast("WIN " + playerId);
+            broadcast("WIN " + getPlayerName(playerId));
             recordWin(playerId);   // ← 여기서 ID 기반 저장
 
             gameActive = false;
@@ -124,7 +127,7 @@ public class OmokServer {
     }
 
     /**
-     * 경기기 기록 저장
+     * 경기 기록 저장
      */
     public synchronized void recordWin(int winnerId) {
         int loserId = getOpponentId(winnerId);
@@ -241,6 +244,7 @@ public class OmokServer {
                     : rematchRequester;
             if (notifyTarget != -1 && notifyTarget != handler.getPlayerId()) {
                 sendToPlayer(notifyTarget, "REMATCH_CANCEL 상대가 게임을 떠났습니다.");
+
             }
             rematchRequester = -1;
         }
@@ -277,41 +281,54 @@ public class OmokServer {
         gameActive = true;
 
         int startPlayer = gameBoard.getCurrentTurn();
-        if (startPlayer == -1) {
-            startPlayer = 1;
-            gameBoard.setCurrentTurn(startPlayer);
-        }
+//        if (startPlayer == -1) {
+//            startPlayer = 1;
+//            gameBoard.setCurrentTurn(startPlayer);
+//        }
 
         broadcast("RESET");
         broadcast("START " + startPlayer);
         startTimer();
         System.out.println("두 명이 모두 연결되었습니다. 게임 시작!");
-        sendPlayerInfoToClients();
     }
 
-    public synchronized void sendPlayerInfoToClients() {
-        if (clients.size() < 2) return;
+//    public synchronized void sendPlayerInfoToClients() {
+//        if (clients.size() < 2) return;
+//
+//        int p1 = clients.get(0).getPlayerId();
+//        int p2 = clients.get(1).getPlayerId();
+//
+//        String name1 = getPlayerName(p1);
+//        String name2 = getPlayerName(p2);
+//
+//        int wins1 = getWins(name1);
+//        int losses1 = getLosses(name1);
+//        int wins2 = getWins(name2);
+//        int losses2 = getLosses(name2);
+//
+//        double rate1 = wins1 + losses1 > 0 ? (wins1 * 100.0 / (wins1 + losses1)) : 0;
+//        double rate2 = wins2 + losses2 > 0 ? (wins2 * 100.0 / (wins2 + losses2)) : 0;
+//
+//        String msg = String.format(
+//            "PLAYER_INFO %s %.2f %s %.2f",
+//            name1, rate1,
+//            name2, rate2
+//        );
+//
+//        broadcast(msg);
+//    } 기존의 방식은 clients에서 플레이어 아이디를 뽑아오는 방식이라 꼬이기 쉬움
 
-        int p1 = clients.get(0).getPlayerId();
-        int p2 = clients.get(1).getPlayerId();
+    private void sendPlayerInfoToClients() {
+        String blackName = getPlayerName(1); // playerId 1 = 흑
+        String whiteName = getPlayerName(2); // playerId 2 = 백
 
-        String name1 = getPlayerName(p1);
-        String name2 = getPlayerName(p2);
-
-        int wins1 = getWins(name1);
-        int losses1 = getLosses(name1);
-        int wins2 = getWins(name2);
-        int losses2 = getLosses(name2);
+        int wins1 = getWins(blackName), losses1 = getLosses(blackName);
+        int wins2 = getWins(whiteName), losses2 = getLosses(whiteName);
 
         double rate1 = wins1 + losses1 > 0 ? (wins1 * 100.0 / (wins1 + losses1)) : 0;
         double rate2 = wins2 + losses2 > 0 ? (wins2 * 100.0 / (wins2 + losses2)) : 0;
 
-        String msg = String.format(
-            "PLAYER_INFO %s %.2f %s %.2f",
-            name1, rate1,
-            name2, rate2
-        );
-
+        String msg = String.format("PLAYER_INFO %s %.2f %s %.2f", blackName, rate1, whiteName, rate2);
         broadcast(msg);
     }
 

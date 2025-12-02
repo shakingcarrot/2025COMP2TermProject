@@ -3,8 +3,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 /**
  * NetworkHandler
@@ -29,6 +28,8 @@ public class NetworkHandler {
     private BoardPanel board;
     private TimerPanel timerPanel;
     private ChatWindow chatWindow;
+    private JDialog currentDialog;
+
 
     /**
      * 서버에 연결하고 플레이어 ID를 수신한다. 실패 시 사용자에게 메시지를 띄운다.
@@ -113,6 +114,7 @@ public class NetworkHandler {
                     if (timerPanel != null) {
                         timerPanel.setCurrentPlayer(startPlayer);
                         timerPanel.updateTime(35);
+                        closeInfoMessage();
                     }
                 } else if (msg.startsWith("CHAT")) {
                     if (chatWindow == null) continue;
@@ -127,12 +129,13 @@ public class NetworkHandler {
                 } else if (msg.startsWith("REMATCH_WAIT")) {
                     String opponent = msg.length() > 13 ? msg.substring(13).trim() : "상대";
                     showInfoMessage(opponent + "님의 응답을 기다리는 중입니다.");
+                    //다이얼로그 띄워도 어짜피 상대를 기다리는 다이얼로그에 씹혀서 채팅으로 알리는 게 좋을 것 같았습니다.
                 } else if (msg.startsWith("REMATCH_ACCEPT")) {
                     String accepter = msg.length() > 15 ? msg.substring(15).trim() : "상대";
-                    showInfoMessage(accepter + "님이 다시하기 요청을 수락했습니다. 새 게임을 시작합니다.");
+                    chatWindow.appendMessage(accepter + "님이 다시하기 요청을 수락했습니다. 새 게임을 시작합니다.");
                 } else if (msg.startsWith("REMATCH_CANCEL")) {
-                    String reason = msg.length() > 15 ? msg.substring(15).trim() : "다시하기 요청이 취소되었습니다.";
-                    showInfoMessage(reason);
+                    chatWindow.appendMessage(msg.length() > 15 ? "상대가 게임을 떠났습니다." : "다시하기 요청이 취소되었습니다.");
+                    //다이얼로그 띄워도 어짜피 상대를 기다리는 다이얼로그에 씹혀서 채팅으로 알리는 게 좋을 것 같았습니다.
                 } else if (msg.startsWith("REMATCH_FAIL")) {
                     String reason = msg.length() > 13 ? msg.substring(13).trim() : "상대를 기다리는 중입니다.";
                     showInfoMessage(reason);
@@ -189,10 +192,25 @@ public class NetworkHandler {
     public String getUsername() { return username; }
 
     private void showInfoMessage(String message) {
-        SwingUtilities.invokeLater(() ->
-                JOptionPane.showMessageDialog(board != null ? board : null, message, "알림", JOptionPane.INFORMATION_MESSAGE)
-        );
+        SwingUtilities.invokeLater(() -> {
+            if (currentDialog != null && currentDialog.isShowing()) {
+                currentDialog.dispose();
+            }
+
+            JOptionPane optionPane = new JOptionPane(message, JOptionPane.INFORMATION_MESSAGE);
+            currentDialog = optionPane.createDialog(board, "알림");
+            currentDialog.setVisible(true);
+        });
     }
+
+    //매칭되면 상대를 기다리고 있다는 메시지 창이 자동으로 닫힙니다.
+    private void closeInfoMessage() {
+        SwingUtilities.invokeLater(() -> {
+            if (currentDialog != null && currentDialog.isShowing()) {
+                currentDialog.dispose();
+            }
+        });
+        }
 
     private void authenticate(String username, String password, AuthMode mode) throws IOException {
         out.writeUTF("AUTH " + mode.name() + " " + username + " " + password);

@@ -72,6 +72,9 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
             g.drawLine(30 + i * 30, 30, 30 + i * 30, 450);
         }
 
+        //천원(중점)
+        g.fillOval(235,235,10,10);
+
         // 돌
         for (int i = 0; i < 15; i++)
             for (int j = 0; j < 15; j++) {
@@ -159,7 +162,7 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
      * 서버로부터 받은 승리 신호를 처리합니다 (승리/무승부 dialog 표시).
      */
     public void handleWin(int winner) {
-        showGameEndDialog("🎉 플레이어 " + winner + " 승리!");
+        showGameEndDialog("🎉" + winner + " 승리!");
     }
 
     /**
