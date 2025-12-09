@@ -147,12 +147,16 @@ public class NetworkHandler {
                 } else if (msg.startsWith("PLAYER_INFO")) {
                     String[] p = msg.split(" ");
                     String blackName = p[1];
-                    double blackRate = Double.parseDouble(p[2]);
-                    String whiteName = p[3];
-                    double whiteRate = Double.parseDouble(p[4]);
+                    int blackWin = Integer.parseInt(p[2]);
+                    int blackLose = Integer.parseInt(p[3]);
+                    double blackRate = Double.parseDouble(p[4]);
+                    String whiteName = p[5];
+                    int whiteWin = Integer.parseInt(p[6]);
+                    int whiteLose = Integer.parseInt(p[7]);
+                    double whiteRate = Double.parseDouble(p[8]);
 
                     if (board != null) {
-                        board.updatePlayerInfo(blackName, blackRate, whiteName, whiteRate);
+                        board.updatePlayerInfo(blackName, blackWin, blackLose, blackRate, whiteName, whiteWin, whiteLose, whiteRate);
                     }
                 }
             }

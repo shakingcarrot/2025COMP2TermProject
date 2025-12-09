@@ -39,11 +39,11 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
     // ---------------------------------------------
     // ⭐ 추가된 메소드: 서버로부터 닉네임 + 승률 전달받아 갱신
     // ---------------------------------------------
-    public void updatePlayerInfo(String blackName, double blackRate,
-                                 String whiteName, double whiteRate) {
+    public void updatePlayerInfo(String blackName, int blackWin, int blackLose, double blackRate,
+                                 String whiteName, int whiteWin, int whiteLose, double whiteRate) {
 
-        this.blackInfo = blackName + " (" + String.format("%.0f%%", blackRate) + ")";
-        this.whiteInfo = whiteName + " (" + String.format("%.0f%%", whiteRate) + ")";
+        this.blackInfo = blackName + " " + blackWin + "승 " + blackLose + "패 (" + String.format("%.0f%%", blackRate) + ")";
+        this.whiteInfo = whiteName + " " + whiteWin + "승 " + whiteLose + "패 (" + String.format("%.0f%%", whiteRate) + ")";
         repaint();
     }
     // ---------------------------------------------
