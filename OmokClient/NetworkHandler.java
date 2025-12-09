@@ -122,7 +122,7 @@ public class NetworkHandler {
                     if (parts.length < 3) continue;
                     int sender = Integer.parseInt(parts[1]);
                     String text = parts[2];
-                    chatWindow.appendMessage("플레이어 " + sender + ": " + text);
+                    chatWindow.appendMessage((sender == 1 ? "(흑)" : "(백)") + text);
                 } else if (msg.startsWith("REMATCH_PROMPT")) {
                     String requester = msg.length() > 15 ? msg.substring(15).trim() : "상대";
                     showInfoMessage(requester + "님이 다시하기를 신청했습니다.\n다시하기 버튼을 눌러 수락하세요.");

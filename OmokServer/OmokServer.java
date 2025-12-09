@@ -206,7 +206,7 @@ public class OmokServer {
         if (trimmed.isEmpty()) return;
 
         String displayName = playerNames.getOrDefault(playerId, "Player" + playerId);
-        String formatted = "CHAT " + playerId + " [" + displayName + "] " + trimmed;
+        String formatted = "CHAT " + playerId + " " + displayName + " : " + trimmed;
         chatHistory.add(formatted);
         if (chatHistory.size() > 100) {
             chatHistory.remove(0);

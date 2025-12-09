@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
 
 /**
  * ChatWindow
@@ -40,8 +42,12 @@ public class ChatWindow extends JDialog {
      * 서버에서 수신한 채팅 메시지를 창에 추가한다.
      */
     public void appendMessage(String message) {
+        long systemTime = System.currentTimeMillis();
+        SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss", Locale.KOREA);
+        String realTime = format.format(systemTime);
+
         SwingUtilities.invokeLater(() -> {
-            chatArea.append(message + "\n");
+            chatArea.append("[" + realTime + "] " + message + "\n");
             chatArea.setCaretPosition(chatArea.getDocument().getLength());
         });
     }
