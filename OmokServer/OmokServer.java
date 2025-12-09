@@ -206,7 +206,7 @@ public class OmokServer {
         if (trimmed.isEmpty()) return;
 
         String displayName = playerNames.getOrDefault(playerId, "Player" + playerId);
-        String formatted = "CHAT " + playerId + " [" + displayName + "] " + trimmed;
+        String formatted = "CHAT " + playerId + " " + displayName + " : " + trimmed;
         chatHistory.add(formatted);
         if (chatHistory.size() > 100) {
             chatHistory.remove(0);
@@ -328,7 +328,7 @@ public class OmokServer {
         double rate1 = wins1 + losses1 > 0 ? (wins1 * 100.0 / (wins1 + losses1)) : 0;
         double rate2 = wins2 + losses2 > 0 ? (wins2 * 100.0 / (wins2 + losses2)) : 0;
 
-        String msg = String.format("PLAYER_INFO %s %.2f %s %.2f", blackName, rate1, whiteName, rate2);
+        String msg = String.format("PLAYER_INFO %s %d %d %.2f %s %d %d %.2f", blackName, wins1, losses1, rate1, whiteName, wins2, losses2, rate2);
         broadcast(msg);
     }
 

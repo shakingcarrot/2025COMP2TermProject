@@ -122,7 +122,7 @@ public class NetworkHandler {
                     if (parts.length < 3) continue;
                     int sender = Integer.parseInt(parts[1]);
                     String text = parts[2];
-                    chatWindow.appendMessage("플레이어 " + sender + ": " + text);
+                    chatWindow.appendMessage((sender == 1 ? "(흑)" : "(백)") + text);
                 } else if (msg.startsWith("REMATCH_PROMPT")) {
                     String requester = msg.length() > 15 ? msg.substring(15).trim() : "상대";
                     showInfoMessage(requester + "님이 다시하기를 신청했습니다.\n다시하기 버튼을 눌러 수락하세요.");
@@ -147,12 +147,16 @@ public class NetworkHandler {
                 } else if (msg.startsWith("PLAYER_INFO")) {
                     String[] p = msg.split(" ");
                     String blackName = p[1];
-                    double blackRate = Double.parseDouble(p[2]);
-                    String whiteName = p[3];
-                    double whiteRate = Double.parseDouble(p[4]);
+                    int blackWin = Integer.parseInt(p[2]);
+                    int blackLose = Integer.parseInt(p[3]);
+                    double blackRate = Double.parseDouble(p[4]);
+                    String whiteName = p[5];
+                    int whiteWin = Integer.parseInt(p[6]);
+                    int whiteLose = Integer.parseInt(p[7]);
+                    double whiteRate = Double.parseDouble(p[8]);
 
                     if (board != null) {
-                        board.updatePlayerInfo(blackName, blackRate, whiteName, whiteRate);
+                        board.updatePlayerInfo(blackName, blackWin, blackLose, blackRate, whiteName, whiteWin, whiteLose, whiteRate);
                     }
                 }
             }
