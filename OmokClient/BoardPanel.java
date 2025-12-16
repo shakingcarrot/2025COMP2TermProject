@@ -161,7 +161,7 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
     /**
      * 서버로부터 받은 승리 신호를 처리합니다 (승리/무승부 dialog 표시).
      */
-    public void handleWin(int winner) {
+    public void handleWin(String winner) {
         showGameEndDialog("🎉" + winner + " 승리!");
     }
 

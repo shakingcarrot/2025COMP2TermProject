@@ -90,7 +90,7 @@ public class NetworkHandler {
                         board.updateBoard(x, y, pid);
                     }
                 } else if (msg.startsWith("WIN")) {
-                    int winner = Integer.parseInt(msg.split(" ")[1]);
+                    String winner = msg.split(" ")[2];
                     if (board != null) {
                         board.handleWin(winner);
                     }
