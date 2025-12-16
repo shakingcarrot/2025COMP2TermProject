@@ -114,7 +114,7 @@ public class OmokServer {
         broadcast("MOVE " + x + " " + y + " " + playerId);
 
         if (gameBoard.checkWin(x, y, playerId)) {
-            broadcast("WIN " + getPlayerName(playerId));
+            broadcast("WIN " + playerId + " " + getPlayerName(playerId));
             recordWin(playerId);   // ← 여기서 ID 기반 저장
 
             gameActive = false;
