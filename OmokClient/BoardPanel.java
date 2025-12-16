@@ -117,11 +117,13 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
     }
 
     public void updateBoard(int x, int y, int player) {
-        board[x][y] = player;
-        repaint();
-        if (GameRule.isDraw(board)) {
-            showGameEndDialog("무승부입니다!");
-        }
+        SwingUtilities.invokeLater(() -> {
+            board[x][y] = player;
+            repaint();
+            if (GameRule.isDraw(board)) {
+                showGameEndDialog("무승부입니다!");
+            }
+        });
     }
 
     /**
@@ -161,8 +163,10 @@ public class BoardPanel extends JPanel implements MouseListener, MouseMotionList
     /**
      * 서버로부터 받은 승리 신호를 처리합니다 (승리/무승부 dialog 표시).
      */
-    public void handleWin(int winner) {
-        showGameEndDialog("🎉" + winner + " 승리!");
+    // 서버에서 전달받은 승자 정보(이름 또는 id 문자열)를 처리
+    public void handleWin(String winner) {
+        String display = (winner == null || winner.isEmpty()) ? "승리" : winner + " 승리";
+        showGameEndDialog("🎉 " + display + "!");
     }
 
     /**

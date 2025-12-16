@@ -81,18 +81,26 @@ public class NetworkHandler {
         try {
             while (true) {
                 String msg = in.readUTF();
-                if (msg.startsWith("MOVE")) {
-                    String[] p = msg.split(" ");
-                    int x = Integer.parseInt(p[1]);
-                    int y = Integer.parseInt(p[2]);
-                    int pid = Integer.parseInt(p[3]);
+                    if (msg.startsWith("MOVE")) {
+                        String[] p = msg.split(" ");
+                        if (p.length >= 4) {
+                            try {
+                                int x = Integer.parseInt(p[1]);
+                                int y = Integer.parseInt(p[2]);
+                                int pid = Integer.parseInt(p[3]);
+                                if (board != null) {
+                                    board.updateBoard(x, y, pid);
+                                }
+                            } catch (NumberFormatException nfx) {
+                                // 잘못된 MOVE 포맷은 무시
+                            }
+                        }
+                    } else if (msg.startsWith("WIN")) {
+                    // 서버는 사용자 이름 또는 id 둘 다 보낼 수 있음. 안전하게 문자열로 취급.
+                    String winnerPayload = msg.length() > 4 ? msg.substring(4).trim() : "";
                     if (board != null) {
-                        board.updateBoard(x, y, pid);
-                    }
-                } else if (msg.startsWith("WIN")) {
-                    int winner = Integer.parseInt(msg.split(" ")[1]);
-                    if (board != null) {
-                        board.handleWin(winner);
+                        String finalWinner = winnerPayload;
+                        SwingUtilities.invokeLater(() -> board.handleWin(finalWinner));
                     }
                 } else if (msg.equals("RESET")) {
                     // 서버로부터 게임 초기화 신호 수신
@@ -100,29 +108,47 @@ public class NetworkHandler {
                         board.handleReset();
                     }
                 } else if (msg.startsWith("TIME")) {
-                    int remainingTime = Integer.parseInt(msg.split(" ")[1]);
-                    if (timerPanel != null) {
-                        timerPanel.updateTime(remainingTime);
+                    try {
+                        int remainingTime = Integer.parseInt(msg.split(" ")[1]);
+                        if (timerPanel != null) {
+                            timerPanel.updateTime(remainingTime);
+                        }
+                    } catch (Exception ex) {
+                        // 무시
                     }
                 } else if (msg.startsWith("TURN")) {
-                    int currentPlayer = Integer.parseInt(msg.split(" ")[1]);
-                    if (timerPanel != null) {
-                        timerPanel.setCurrentPlayer(currentPlayer);
+                    try {
+                        int currentPlayer = Integer.parseInt(msg.split(" ")[1]);
+                        if (timerPanel != null) {
+                            timerPanel.setCurrentPlayer(currentPlayer);
+                        }
+                    } catch (Exception ex) {
+                        // 무시
                     }
                 } else if (msg.startsWith("START")) {
-                    int startPlayer = Integer.parseInt(msg.split(" ")[1]);
-                    if (timerPanel != null) {
-                        timerPanel.setCurrentPlayer(startPlayer);
-                        timerPanel.updateTime(35);
-                        closeInfoMessage();
+                    try {
+                        int startPlayer = Integer.parseInt(msg.split(" ")[1]);
+                        if (timerPanel != null) {
+                            timerPanel.setCurrentPlayer(startPlayer);
+                            timerPanel.updateTime(35);
+                            closeInfoMessage();
+                        }
+                    } catch (Exception ex) {
+                        // 무시
                     }
                 } else if (msg.startsWith("CHAT")) {
                     if (chatWindow == null) continue;
                     String[] parts = msg.split(" ", 3);
-                    if (parts.length < 3) continue;
-                    int sender = Integer.parseInt(parts[1]);
-                    String text = parts[2];
-                    chatWindow.appendMessage((sender == 1 ? "(흑)" : "(백)") + text);
+                    if (parts.length < 2) continue;
+                    String possibleId = parts[1];
+                    String text = parts.length >= 3 ? parts[2] : "";
+                    try {
+                        int sender = Integer.parseInt(possibleId);
+                        chatWindow.appendMessage((sender == 1 ? "(흑)" : "(백)") + text);
+                    } catch (NumberFormatException nfx) {
+                        // 서버가 playerId 대신 이름을 보냈다면 그대로 표시
+                        chatWindow.appendMessage(possibleId + " : " + text);
+                    }
                 } else if (msg.startsWith("REMATCH_PROMPT")) {
                     String requester = msg.length() > 15 ? msg.substring(15).trim() : "상대";
                     showInfoMessage(requester + "님이 다시하기를 신청했습니다.\n다시하기 버튼을 눌러 수락하세요.");
